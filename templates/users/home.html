@@ -1,0 +1,45 @@
+{% extends '_base.html' %}
+{% load static %}
+
+{% block content %}
+  <div class="h-90">
+    <div class="row h-25 background-highlight-2">
+      <div class="col-sm h-100">
+        <div class="d-flex justify-content-center">
+          <form class="form-inline">
+            <label class="sr-only" for="inlineFormInputName2">Name</label>
+            <input type="text" class="form-control" id="inlineFormInputName2" placeholder="Jane Doe">
+            <button type="submit" class="btn btn-primary mx-2">search</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="row h-75 background-highlight-3">
+      <div class="col-sm h-100">
+        <div class="h-10 background-highlight-2">
+          <h3 class="m-0"></h3>
+        </div>
+        <div class="h-90 overflow-auto background-highlight-1">
+        </div>
+      </div>
+
+      <div class="col-sm h-100">
+        <div class="h-10 background-highlight-2">
+          <h3 class="m-0"></h3>
+        </div>
+        <div class="h-90 overflow-auto background-highlight-1">
+        </div>
+      </div>
+
+      <div class="col-sm h-100">
+        <div class="h-10 background-highlight-2">
+          <h3 class="m-0"></h3>
+        </div>
+        <div class="h-90 overflow-auto background-highlight-1">
+        </div>
+      </div>
+    </div>
+
+  </div>
+  {% endblock content %}

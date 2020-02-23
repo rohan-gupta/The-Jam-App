@@ -1,0 +1,19 @@
+.h-10{
+  height: 10%!important;
+}
+
+.h-90{
+  height: 90%!important;
+}
+
+.background-highlight-1{
+  background-color: rgba(0,0,255,.1);
+}
+
+.background-highlight-2{
+  background-color: rgba(155,0,255,.1);
+}
+
+.background-highlight-3{
+  background-color: rgba(255,0,255,.1);
+}
