@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect
+from django.http import JsonResponse, HttpResponseRedirect
 from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -12,10 +12,13 @@ from .models import User, SpotifyUser
 import os
 import requests
 
+from .utils import *
+
 # Reading enviroment variables
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
+
 
 # Create your views here.
 def SignupView(request):
@@ -43,7 +46,7 @@ def SignupView(request):
 @login_required
 def AccountView(request):
 
-    spotify_connected = ''
+    spotify_connected = False
     facebook_connected = False
 
     if request.method == "GET":
@@ -67,57 +70,53 @@ def HomeView(request):
     return render(request, 'users/home.html')
 
 
-def SpotifyView(request):
+def SpotifyLoginView(request):
 
-    if request.method == "GET" and request.GET.get("code"):
-        try:
-            spotifyuser = SpotifyUser.objects.get(user__pk=request.user.pk)
-        except:
-            # Request for access token and refresh token
-            auth_code = request.GET.get("code")
-            params = {
-                "grant_type": "authorization_code",
-                "code": auth_code,
-                "redirect_uri": SPOTIFY_REDIRECT_URI,
-                "client_id": SPOTIFY_CLIENT_ID,
-                "client_secret": SPOTIFY_CLIENT_SECRET,
-            }
+    params = {
+        "client_id": SPOTIFY_CLIENT_ID,
+        "response_type": "code",
+        "redirect_uri": SPOTIFY_REDIRECT_URI,
+        "scope": "playlist-read-private user-library-read user-follow-read user-read-email",
+        "state": request.session.get("_auth_user_hash")
+    }
+    params = urlencode(params)
+    auth_endpoint = f"https://accounts.spotify.com/authorize?{params}"
 
-            request_endpoint = "https://accounts.spotify.com/api/token"
-            response = requests.post(request_endpoint, data=params)
-            response = response.json()
+    return redirect(auth_endpoint)
 
-            access_token = response["access_token"]
+
+def SpotifyCallbackView(request):
+
+    if request.GET.get("state") == request.session.get("_auth_user_hash"):
+        if "code" in request.GET:
+            code = request.GET.get("code")
+
+            # Get access token and refresh token
+            response = getSpotifyTokens(code, SPOTIFY_REDIRECT_URI, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET)
+            request.session["spotify_access_token"] = response["access_token"]
+            request.session["spotify_token_expires_in"] = 3600
             refresh_token = response["refresh_token"]
 
-            print(access_token)
-
-            # Request for user's spotify account details
-            headers = {"Authorization": "Bearer " + access_token}
-
-            request_endpoint = "https://api.spotify.com/v1/me"
-            response = requests.get(request_endpoint, headers=headers)
-            response = response.json()
-
-            spotifyuser = SpotifyUser(user=request.user, spotify_email=response["email"], spotify_name=response["display_name"], spotify_id=response["id"], refresh_token=refresh_token)
+            # Get spotify user details
+            response = getSpotifyUserDetails(request.session["spotify_access_token"])
+            user = User.objects.get(pk=request.user.pk)
+            spotifyuser = SpotifyUser(
+                user=user,
+                spotify_email=response["email"],
+                spotify_name=response["display_name"],
+                spotify_id=response["id"],
+                refresh_token=refresh_token
+            )
             spotifyuser.save()
 
-        return redirect(reverse('account'))
+        elif "error" in request.GET:
+            error = request.GET.get("error")
 
-    else:
-        params = {
-            "client_id": SPOTIFY_CLIENT_ID,
-            "response_type": "code",
-            "redirect_uri": SPOTIFY_REDIRECT_URI,
-            "scope": "playlist-read-private user-library-read user-follow-read user-read-email",
-        }
-        params = urlencode(params)
-        auth_endpoint = "https://accounts.spotify.com/authorize?%s" % (params)
-
-        return redirect(auth_endpoint)
+    return redirect(reverse('account'))
 
 
-def FacebookView(request):
+
+def FacebookLoginView(request):
 
     print('Facebook button clicked')
 
